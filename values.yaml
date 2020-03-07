@@ -1,0 +1,309 @@
+# Default values for opa.
+# -----------------------
+#
+# The 'opa' key embeds an OPA configuration file. See
+# https://www.openpolicyagent.org/docs/configuration.html for more details.
+# Default value is no default config. For custom config, the opa key
+# needs to include the opa config yaml, eg:
+opa: null
+  # services:
+  #   controller:
+  #     url: 'https://www.openpolicyagent.org'
+  # bundles:
+  #   quickstart:
+  #     service: controller
+  #     resource: /bundles/helm-kubernetes-quickstart
+  # default_decision: /helm_kubernetes_quickstart/main
+
+# Setup the webhook using cert-manager
+certManager:
+  enabled: false
+
+# Expose the prometheus scraping endpoint
+prometheus:
+  enabled: false
+
+## ServiceMonitor consumed by prometheus-operator
+serviceMonitor:
+  ## If the operator is installed in your cluster, set to true to create a Service Monitor Entry
+  enabled: false
+  interval: "15s"
+  ## Namespace in which the service monitor is created
+  # namespace: monitoring
+  # Added to the ServiceMonitor object so that prometheus-operator is able to discover it
+  ## ref: https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#prometheusspec
+  additionalLabels: {}
+
+# Annotations in the deployment template
+annotations:
+  {}
+
+# Bootstrap policies to load upon startup
+# Define policies in the form of:
+# <policyName> : |-
+#   <regoBody>
+# For example, to mask the entire input body in the decision logs:
+# bootstrapPolicies:
+#   log: |-
+#     package system.log
+#     mask["/input"]
+bootstrapPolicies: {}
+
+# To enforce mutating policies, change to MutatingWebhookConfiguration.
+admissionControllerKind: ValidatingWebhookConfiguration
+
+# To _fail closed_ on failures, change to Fail. During initial testing, we
+# recommend leaving the failure policy as Ignore.
+admissionControllerFailurePolicy: Ignore
+
+# Adds a namespace selector to the admission controller webhook
+admissionControllerNamespaceSelector:
+  matchExpressions:
+    - {key: openpolicyagent.org/webhook, operator: NotIn, values: [ignore]}
+
+# SideEffectClass for the webhook, setting to None enables dry-run
+admissionControllerSideEffect: Unknown
+
+# To restrict the kinds of operations and resources that are subject to OPA
+# policy checks, see the settings below. By default, all resources and
+# operations are subject to OPA policy checks.
+admissionControllerRules:
+  - operations: ["CREATE", "UPDATE"]
+    apiGroups: ["*"]
+    apiVersions: ["*"]
+    resources: ["*"]
+
+# Controls a PodDisruptionBudget for the OPA pod. Suggested use if having opa
+# always running for admission control is important
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+# maxUnavailable: 1
+
+# The helm Chart will automatically generate a CA and server certificate for
+# the OPA. If you want to supply your own certificates, set the field below to
+# false and add the PEM encoded CA certificate and server key pair below.
+#
+# WARNING: The common name name in the server certificate MUST match the
+# hostname of the service that exposes the OPA to the apiserver. For example.
+# if the service name is created in the "default" nanamespace with name "opa"
+# the common name MUST be set to "opa.default.svc".
+#
+# If the common name is not set correctly, the apiserver will refuse to
+# communicate with the OPA.
+generateAdmissionControllerCerts: false
+admissionControllerCA: |
+  -----BEGIN CERTIFICATE-----
+  MIIDETCCAfmgAwIBAgIUcfJBm5hHjFMwTm3Rfed7jlJD2RswDQYJKoZIhvcNAQEL
+  BQAwFzEVMBMGA1UEAwwMYWRtaXNzaW9uX2NhMCAXDTIwMDMwNzEwNTE1MloYDzIy
+  OTMxMjIxMTA1MTUyWjAXMRUwEwYDVQQDDAxhZG1pc3Npb25fY2EwggEiMA0GCSqG
+  SIb3DQEBAQUAA4IBDwAwggEKAoIBAQDOU2yow6FQKMcefTbixGBrI8kvwfANnfFa
+  P8UQVvbu1NHHO9KVsX3MA5l0zSCtCLy1FQt+zc78ocYjWo7KqeNs3vEcKfbPJl7A
+  8mIE9X0T3QNu9m7p7hsYWq7cUAxe8QhoQm4US9lzTIQqq/GQbWdAxbaKkE8/qdb5
+  kyI0OJoM6UyeGpgZgek5UcyXRbT/XjNCEPAyq4SELK2yU4DmG5oMGc+PkI90itRR
+  HRcUPjYwMpN6ULOk5qfJUKoKtIYEISEzIMMOheXaa6phf9iZ3p7jQLHiPQ7Dcsn5
+  frGza9Bi/+49+ktA7wbr+O53EP5bumBdowg+ubGVonL24p8PxR5BAgMBAAGjUzBR
+  MB0GA1UdDgQWBBQIQZvRYZBC5gzus01ejv0qeBc/pjAfBgNVHSMEGDAWgBQIQZvR
+  YZBC5gzus01ejv0qeBc/pjAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3DQEBCwUA
+  A4IBAQBZLCMFiqdvANvvY9PsLqpZa7CcA/VlEWFRsnT3JkBnf4b9jtyDqmT6TJcR
+  peArnS2YWxkbbGOiJ+2l+61Q6frknoue2PzSHhhMRgNzzCl3J4++6zyJoHxGXqLV
+  ptd31xmxQRvNVD+jgYgtc1HlKppoCrTg8U5yDHR6v0pyiUJIWJYkM+DPM3/+Xtf+
+  FHmL9OcbJFSzjIX1UjJL9BKGY1hhpOHl0XfG6a4F/pKQY+oiU/i48eiBHyGacoOU
+  uvpnKM+OL7UxDHCUaS2ECaoWSctvn6w5hu2X66O8aeIgLZVsTJut+ZUEQf8iv7KZ
+  YJliwGWWKIukCnaCo9G9o2khhTFD
+  -----END CERTIFICATE-----
+admissionControllerCert: |
+  -----BEGIN CERTIFICATE-----
+  MIIC+jCCAeKgAwIBAgIUWkXGGJQgwf6r+RLrVG570hgDpI4wDQYJKoZIhvcNAQEL
+  BQAwFzEVMBMGA1UEAwwMYWRtaXNzaW9uX2NhMCAXDTIwMDMwNzEwNTMxMloYDzIy
+  OTMxMjIxMTA1MzEyWjAaMRgwFgYDVQQDDA9vcGEuZGVmYXVsdC5zdmMwggEiMA0G
+  CSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQC+ZA7A562HOEHGflVgHSRj1Wiu51/V
+  NeULVemcZ6GlEy1taler3dssB/cA+9mQcDWSuxw2pIuA2CxffRk3zxVHumhl1J+5
+  x8SqvHvphn+cbSb5AnBIPRjFWdQgKoffTj7QbMcN8UDPsWirk/d3T/wVG4G4dkas
+  dBZQznLCiGPZJmEGVEsRHsf29FZhJuLKVTo//mTwy+XTnLmKuWtKUMZCoBbqJ4fV
+  aBJSwUJQqYLrc4nMq5czP/Pn2ZpDRc+3KNGSWsvG5fAKsuwq0ixX2c/+MrsusdvB
+  hsncO4iNzBOUNoTGW8zrqr/darF6Agdu9WMHouW2ms3glddcpUQYgYChAgMBAAGj
+  OTA3MAkGA1UdEwQCMAAwCwYDVR0PBAQDAgXgMB0GA1UdJQQWMBQGCCsGAQUFBwMC
+  BggrBgEFBQcDATANBgkqhkiG9w0BAQsFAAOCAQEAEB34OwKkwMbxlVOAqQaOqwiL
+  mxLDWnMBzNebqjrofm/BUISktNtAVsu/HF07ILNpbla9uaVYwWYmdRe6M+eiZzAh
+  2v3GOamxZOhz5Iz1gFeVKoolggdoy508OeZz5sMyv1Ahz/04MPBJgwih69bwOpSb
+  Wuw7A8ROVhF8Rv/7jNQj+48PBuGpQT8PMmOTW5caAIibHInrL2ihyHi8+lY6kSA0
+  PimH/Jj6MsA2ZmdmyBqZxuILsoCwh6bUGVjuLFG+CnUEs178KKqgdatVc+n/UPV/
+  k9nG+xr0SJD73tan2yiSbHn6VpPIR+iaF6WDPKWMLR1oH2yXWQl9ART2+iib5g==
+  -----END CERTIFICATE-----
+  
+admissionControllerKey: |
+  -----BEGIN RSA PRIVATE KEY-----
+  MIIEpAIBAAKCAQEAvmQOwOethzhBxn5VYB0kY9Vorudf1TXlC1XpnGehpRMtbWpX
+  q93bLAf3APvZkHA1krscNqSLgNgsX30ZN88VR7poZdSfucfEqrx76YZ/nG0m+QJw
+  SD0YxVnUICqH304+0GzHDfFAz7Foq5P3d0/8FRuBuHZGrHQWUM5ywohj2SZhBlRL
+  ER7H9vRWYSbiylU6P/5k8Mvl05y5irlrSlDGQqAW6ieH1WgSUsFCUKmC63OJzKuX
+  Mz/z59maQ0XPtyjRklrLxuXwCrLsKtIsV9nP/jK7LrHbwYbJ3DuIjcwTlDaExlvM
+  66q/3WqxegIHbvVjB6LltprN4JXXXKVEGIGAoQIDAQABAoIBAQCguV0PEkWWejJk
+  u6+dFNzsfnMB/AcVuYqi+CLfS0jVTwwxau2aBA8K66pkJTf0TBWdyeE2a8/stBE5
+  hyTrzSCczctl84nnTrJCpB1C9azyw957pchd413u9Dcz9FOBes9iKgIcTga1joHb
+  Hm1xRo96zh7DNu3QlatlCfMtL/CClgLCqXAAWjnM48a5bxR0fUP/tcgDBNFCCh1o
+  CcpqBh4DogFt/UMspVYFr5VyzWMjQFnlDd5JVGuakEh20ATns814KbR2hn+j0daq
+  hC1I+GFrmSZ1sU/8f8cYLrCf194Osctj2bqDAlBK18UTd78Iid6zoJ3uy1J8fzgz
+  x0dS1ytFAoGBAO6M07MK+sHkMdq3BVKeZ02zcwSLc3z+fD4YNMxV9jlrbpC9WlyO
+  /wOqJnrcuQPw0eGpLRKANFciQ8Nm72Fmy+0oFCM44Lk43E3WN9pTeLFMonYWubKe
+  N8aqRoKRgUeO83oIuiZZVS16zITKgMuTvvZRcnzk9OemDYgZUtLZFvrLAoGBAMxR
+  YjCnOynlhFGBUfDrTXNLEz3kSfBfixYWdqwklKFxKwzlYvlWtHyg7N6khD4tPdaN
+  X/26Q+El59s5RKQAAOqiXuuqqbXfN8+FSB55WOxeRXFxBC3Urf84dsaSZXf2/gWv
+  UtamQ7IOxc1jIQgtqki5PwdgnRG/kg5PmbSYmmjDAoGAGUleS3VXfWQWEMwjyU03
+  QBpMj+fEVzSWsPJZ7msSTaXgs4EO6g7SY24O5Ckvh4ZoiRYoy/RBGBduvXDU4StH
+  ZJ1B/TXTRG8Nk0ao5wDAI3MvKXthNdjlqq50CPUpkg9KKd5w9Q21JLwGn/DjVDEW
+  JgAeNbUDbObCOnIMwIL4l58CgYAurgVN8lcdClgBuxb6gPfv+F4MDOUrqth/EmDI
+  kY73l4BrcNj8+GdB9g5IC7Q+9F0lcKVWtcCeZuei+WGKSonrEW+4TgR6DeaVXfEN
+  LVI4po0dDuISin26Sq8wTPAryV1d9SFq8w+SVbexZg187dnyxYf16ofYLzlyVZNb
+  ZGYauwKBgQC9k+8V+7/jlPBx0UxOE719vlkmk1UHkrRrDutgZHWL7mF4UI17EA9A
+  fPlQqMeMIw0TYciJCfy9G1OF6levFgKZjjd+K8g16gY+PV1xWjpQCoAp7FlBhj0t
+  yx1UokE1l9qAHp3sTX/Ne59/FNs9ZXJE3+khYkIJa5zdJbLe7ZzI6g==
+  -----END RSA PRIVATE KEY-----
+
+authz:
+  # Disable if you don't want authorization.
+  # Mostly useful for debugging.
+  enabled: true
+
+# Docker image and tag to deploy.
+image: openpolicyagent/opa
+imageTag: 0.17.2
+imagePullPolicy: IfNotPresent
+
+# Port to which the opa pod will bind itself
+# NOTE IF you use a different port make sure it maches the ones in the readinessProbe
+# and livenessProbe
+port: 443
+
+mgmt:
+  enabled: true
+  image: openpolicyagent/kube-mgmt
+  imageTag: "0.11"
+  imagePullPolicy: IfNotPresent
+  extraArgs: []
+  resources: {}
+  data:
+    enabled: false
+  configmapPolicies:
+# NOTE IF you use these, remember to update the RBAC rules below to allow
+#      permissions to get, list, watch, patch and update configmaps
+    enabled: true
+    namespaces: [default]
+    requireLabel: true
+  replicate:
+# NOTE IF you use these, remember to update the RBAC rules below to allow
+#      permissions to replicate these things
+    cluster: []
+#     - [group/]version/resource
+    namespace: []
+#     - [group/]version/resource
+    path: kubernetes
+
+# Log level for OPA ('debug', 'info', 'error') (app default=info)
+logLevel: info
+
+# Log format for OPA ('text', 'json') (app default=text)
+logFormat: text
+
+# Number of OPA replicas to deploy. OPA maintains an eventually consistent
+# cache of policies and data. If you want high availability you can deploy two
+# or more replicas.
+replicas: 2
+
+# To control how the OPA is scheduled on the cluster, set the affinity,
+# tolerations and nodeSelector values below. For example, to deploy OPA onto
+# the master nodes, 1 replica per node:
+#
+# affinity:
+#   podAntiAffinity:
+#     requiredDuringSchedulingIgnoredDuringExecution:
+#     - labelSelector:
+#         matchExpressions:
+#         - key: "app"
+#           operator: In
+#           values:
+#           - opa
+#       topologyKey: "kubernetes.io/hostname"
+# tolerations:
+# - key: "node-role.kubernetes.io/master"
+#   effect: NoSchedule
+#   operator: Exists
+# nodeSelector:
+#   kubernetes.io/role: "master"
+affinity: {}
+tolerations: []
+nodeSelector: {}
+
+# To control the CPU and memory resource limits and requests for OPA, set the
+# field below.
+resources: {}
+
+rbac:
+  # If true, create & use RBAC resources
+  #
+  create: true
+  rules:
+    cluster:
+      - apiGroups:
+          - ""
+        resources:
+        - configmaps
+        verbs:
+        - get
+        - list
+        - watch
+        - update
+        - patch
+
+serviceAccount:
+  # Specifies whether a ServiceAccount should be created
+  create: true
+  # The name of the ServiceAccount to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name:
+
+# This proxy allows opa to make Kubernetes SubjectAccessReview checks against the
+# Kubernetes API. You can get a rego function at github.com/open-policy-agent/library
+sar:
+  enabled: false
+  image: lachlanevenson/k8s-kubectl
+  imageTag: latest
+  imagePullPolicy: IfNotPresent
+  resources: {}
+
+# To control the liveness and readiness probes change the fields below.
+readinessProbe:
+  httpGet:
+    path: /health
+    scheme: HTTPS
+    port: 443
+  initialDelaySeconds: 3
+  periodSeconds: 5
+livenessProbe:
+  httpGet:
+    path: /health
+    scheme: HTTPS
+    port: 443
+  initialDelaySeconds: 3
+  periodSeconds: 5
+
+# Set a priorityClass using priorityClassName
+# priorityClassName:
+
+# Timeout for a webhook call in seconds.
+# Starting in kubernetes 1.14 you can set the timeout and it is
+# encouraged to use a small timeout for webhooks. If the webhook call times out, the request
+# the request is handled according to the webhook'sfailure policy.
+# timeoutSeconds: 20
+
+securityContext:
+  enabled: false
+  runAsNonRoot: true
+  runAsUser: 1
+
+deploymentStrategy: {}
+  # rollingUpdate:
+  #   maxSurge: 1
+  #   maxUnavailable: 0
+  # type: RollingUpdate
